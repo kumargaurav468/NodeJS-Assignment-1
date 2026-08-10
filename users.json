@@ -1,1 +1,15 @@
-{"username":"Charles John","empCode":"EMP101","email":"Charles@example.com","userInfo":{"age":45,"city":"New Delhi","department":"IT"}}
+[
+  {
+    "username": "John",
+    "empCode": "EMP101",
+    "email": "john@example.com",
+    "userInfo": { "age": 25, "city": "Ahmedabad", "department": "Development" }
+  },
+  {
+    "username": "John Doe",
+    "empCode": "EMP102",
+    "email": "johnDoe@example.com",
+    "userInfo": { "age": 21, "city": "J&K", "department": "Sales" },
+    "age": 20
+  }
+]

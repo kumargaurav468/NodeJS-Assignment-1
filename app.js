@@ -3,117 +3,148 @@ const fs = require("fs");
 const PORT = 3000;
 
 const server = http.createServer((req, res) => {
-  //Create a POST API endpoint.
   if (req.method === "POST" && req.url === "/users") {
     let body = "";
-    //Receive the request data on the server.
     req.on("data", (chunk) => {
       body += chunk.toString();
     });
-    //on receiving data
+    //after data is received
     req.on("end", () => {
-      console.log(body);
-      const userData = JSON.parse(body);
-      console.log(userData);
-
-      //Save the received user data into a file using the fs module.
-      fs.writeFile("users.json", JSON.stringify(userData), (err) => {
-        if (err) {
-          console.log(err);
-          res.writeHead(500, {
-            "Content-type": "application/JSON",
+      try {
+        const userData = JSON.parse(body);
+        //read existing users
+        fs.readFile("users.json", "utf8", (err, data) => {
+          let users = [];
+          //if file and data exists
+          if (!err && data) {
+            users = JSON.parse(data);
+          }
+          users.push(userData);
+          fs.writeFile("users.json", JSON.stringify(users), (err) => {
+            if (err) {
+              console.log(err);
+              res.writeHead(500, {
+                "Content-Type": "application/json",
+              });
+              return res.end(
+                JSON.stringify({
+                  message: "Error in saving the data.",
+                }),
+              );
+            }
+            res.writeHead(201, {
+              "Content-Type": "application/json",
+            });
+            res.end(
+              JSON.stringify({
+                message: "User Data Received and Saved",
+                user: userData,
+              }),
+            );
           });
-          return res.end(
-            JSON.stringify({
-              message: "Error saving the data",
-            }),
-          );
-        }
-        //data successfully saved
-        res.writeHead(200, {
-          "Content-Type": "application/JSON",
+        });
+      } catch (error) {
+        res.writeHead(400, {
+          "Content-Type": "application/json",
         });
         res.end(
           JSON.stringify({
-            message: "User Data Received and Saved",
-            user: userData,
+            message: "Invalid data",
           }),
         );
-      });
+      }
     });
-  }
-
-  //   Create a PUT API endpoint.
-  else if (req.method === "PUT" && req.url === "/users") {
+  } else if (req.method === "PUT" && req.url === "/users") {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk.toString();
     });
     req.on("end", () => {
-      const userData = JSON.parse(body);
-      fs.readFile("users.json", "utf8", (err, data) => {
-        if (err) {
-          res.writeHead(500, {
-            "Content-type": "application/JSON",
-          });
-          return res.end(
-            JSON.stringify({
-              message: "Error in updating the data",
-            }),
-          );
-        }
-        //read existing user
-        const existingUser = JSON.parse(data);
-        //update only the fields which has been updated
-        Object.assign(existingUser, userData);
-        console.log("Updated User:", userData);
-        //save the updated data
-        fs.writeFile("users.json", JSON.stringify(existingUser), (err) => {
+      try {
+        const userData = JSON.parse(body);
+        //read existing users
+        fs.readFile("users.json", "utf8", (err, data) => {
           if (err) {
             res.writeHead(500, {
-              "Content-type": "application/JSON",
+              "Content-Type": "application/json",
             });
             return res.end(
-              JSON.stringify({
-                message: "Error updating the task",
-              }),
+              JSON.stringify({ message: "Error in updating the data" }),
             );
           }
-          res.writeHead(200, {
-            "Content-type": "application/JSON",
-          });
-          res.end(
-            JSON.stringify({
-              message: "User updated",
-              user: existingUser,
-            }),
+          const users = JSON.parse(data);
+          const userIndex = users.findIndex(
+            (user) => user.empCode === userData.empCode,
           );
+          //if user does not found
+          if (userIndex === -1) {
+            res.writeHead(404, {
+              "Content-Type": "application/json",
+            });
+            return res.end(JSON.stringify({ message: "User not found" }));
+          }
+          //update only the required field
+          users[userIndex] = {
+            ...users[userIndex],
+            ...userData,
+          };
+          console.log("Updated User", users[userIndex]);
+          //save updated users
+          fs.writeFile("users.json", JSON.stringify(users), (err) => {
+            if (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(
+                JSON.stringify({
+                  message: "Error updating the user",
+                }),
+              );
+            }
+            res.writeHead(200, {
+              "Content-Type": "application/json",
+            });
+            res.end(
+              JSON.stringify({
+                message: "User Updated",
+                user: users[userIndex],
+              }),
+            );
+          });
         });
-      });
+      } catch (error) {
+        res.writeHead(400, {
+          "Content-Type": "application/json",
+        });
+        res.end(JSON.stringify({ message: "Invalid Data" }));
+      }
     });
-  }
-  //Create a GET API endpoint.
-  else if (req.method === "GET" && req.url === "/users") {
+  } else if (req.method === "GET" && req.url === "/users") {
     fs.readFile("users.json", "utf8", (err, data) => {
       if (err) {
-        res.writeHead(500, { "Content-type": "application/json" });
+        res.writeHead(500, {
+          "Content-Type": "application/json",
+        });
         return res.end(
-          JSON.stringify({ message: "Error in reading the data." }),
+          JSON.stringify({
+            message: "Error in reading the data",
+          }),
         );
       }
-      const userData = JSON.parse(data);
-      const reponse = {
-        username: userData.username,
-        empCode: userData.empCode,
-      };
+      const users = JSON.parse(data);
+      const response = users.map((user) => ({
+        username: user.username,
+        empCode: user.empCode,
+      }));
+
       res.writeHead(200, {
-        "Content-type": "application/JSON",
+        "Content-Type": "application/json",
       });
-      res.end(JSON.stringify(reponse));
+      return res.end(JSON.stringify(response));
     });
   } else {
-    res.writeHead(404);
-    res.end("Route not found");
+    res.writeHead(404, {
+      "Content-Type": "application/json",
+    });
+    res.end(JSON.stringify({ message: "Route not found" }));
   }
 });
 
