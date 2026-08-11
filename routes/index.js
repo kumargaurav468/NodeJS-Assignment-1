@@ -4,7 +4,10 @@ const postUserController = require("../controller/postUserController");
 
 //get userFile from app.js
 function userRoutes(req, res, userFile) {
-  if (req.url !== "/users") {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  console.log("Path:", url.pathname);
+  console.log("Query:", url.searchParams.get("empCode"));
+  if (url.pathname !== "/users") {
     return false;
   } else if (req.method === "GET") {
     getUserController(req, res, userFile);
